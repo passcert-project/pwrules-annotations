@@ -3,7 +3,7 @@
 // npm package by João Miguel P. Campos (github @mikibakaiki) for PassCert project.
 
 import { CustomCharacterData } from './data/customCharacterData';
-import { CHARACTER_CLASS_END_SENTINEL, CHARACTER_CLASS_START_SENTINEL, Identifier, PROPERTY_SEPARATOR, PROPERTY_VALUE_SEPARATOR, PROPERTY_VALUE_START_SENTINEL, RuleName, SHOULD_NOT_BE_REACHED, SPACE_CODE_POINT } from './data/data.enum';
+import { BlockListIdentifier, CHARACTER_CLASS_END_SENTINEL, CHARACTER_CLASS_START_SENTINEL, Identifier, PROPERTY_SEPARATOR, PROPERTY_VALUE_SEPARATOR, PROPERTY_VALUE_START_SENTINEL, RuleName, SHOULD_NOT_BE_REACHED, SPACE_CODE_POINT } from './data/data.enum';
 import { NamedCharacterData } from './data/namedCharacterData';
 import { RuleData } from './data/ruleData';
 
@@ -369,6 +369,14 @@ export class PasswordRulesParserService {
         return identifier && Object.values(Identifier).includes(identifier.toLowerCase());
     }
 
+    /**
+     * Check if the identifier is a valid one for the "blocklist" rule.
+     * @param identifier The identifier to verify.
+     * @returns True if it is a valid identifier. False if it is not a valid identifier.
+     */
+    private _isValidBlockListPropertyValueIdentifier(identifier: string): boolean {
+        return identifier && Object.values(BlockListIdentifier).includes(identifier.toLowerCase());
+    }
 
     /**
      * Parse a custom character class. These classes are defined by the user and are surrounded by squared brackets ([]).
@@ -426,7 +434,7 @@ export class PasswordRulesParserService {
     }
 
     /**
-     * Parse the values given to the identifiers given to the rules "required" and "allowed".
+     * Parse the values given to the rules "required" and "allowed".
      * @param input The string that contains the rules to be parsed.
      * @param position The position from where to start parsing the input.
      * @returns Returns an array with the information about the required and allowed classes and the last position analyzed
@@ -476,6 +484,27 @@ export class PasswordRulesParserService {
 
             console.error("Failed to find start of next property or property value: " + input.substr(position));
             return [null, position];
+        }
+        return [propertyValues, position];
+    }
+
+    /**
+     * Parse the values given to the rule "blocklist".
+     * @param input The string that contains the rules to be parsed.
+     * @param position The position from where to start parsing the input.
+     * @returns Returns an array with the information about the blocklist and the last position analyzed
+     */
+    private _parseBlockListPropertyValue(input: string, position: number): [string[], number] {
+        let propertyValues = [];
+        if (this._isIdentifierCharacter(input[position])) {
+            let identifierStartPosition = position;
+            let [propertyValue, index] = this._parseIdentifier(input, position);
+            position = index;
+            if (!this._isValidBlockListPropertyValueIdentifier(propertyValue)) {
+                console.error("Unrecognized property value identifier: " + propertyValue);
+                return [null, identifierStartPosition];
+            }
+            propertyValues.push(propertyValue);
         }
         return [propertyValues, position];
     }
@@ -542,6 +571,14 @@ export class PasswordRulesParserService {
                 position = index;
                 if (minMaxLength) {
                     property.propValue = minMaxLength;
+                }
+                return [new RuleData(property.name, property.propValue), position];
+            }
+            case RuleName.BLOCK_LIST: {
+                let [blocklist, index] = this._parseBlockListPropertyValue(input, position);
+                position = index;
+                if (blocklist) {
+                    property.propValue = blocklist;
                 }
                 return [new RuleData(property.name, property.propValue), position];
             }
