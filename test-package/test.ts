@@ -1,4 +1,4 @@
-import { CustomCharacterData, NamedCharacterData, PasswordRulesParserService, RuleData } from "pw-rules-annotations";
+import { CustomCharacterData, NamedCharacterData, PasswordRulesParserService, RuleData } from "pwrules-annotations";
 
 let x = new PasswordRulesParserService();
 

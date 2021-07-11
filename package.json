@@ -1,5 +1,5 @@
 {
-	"name": "pwrules-annotations",
+	"name": "@passcert/pwrules-annotations",
 	"version": "1.0.0",
 	"description": "This package allows the parsing of Apple's password rules.",
 	"main": "./lib/cjs/index.js",
