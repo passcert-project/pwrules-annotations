@@ -426,7 +426,7 @@ export class PasswordRulesParserService {
     }
 
     /**
-     * Parse the values given to the identifiers given to the rules "required" and "allowed".
+     * Parse the values given to the rules "required" and "allowed".
      * @param input The string that contains the rules to be parsed.
      * @param position The position from where to start parsing the input.
      * @returns Returns an array with the information about the required and allowed classes and the last position analyzed
