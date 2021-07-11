@@ -14,14 +14,14 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/passcert-project/npm-pw-rules.git"
+		"url": "git+https://github.com/passcert-project/pwrules-annotations.git"
 	},
 	"author": "",
 	"license": "GPL-3.0",
 	"bugs": {
-		"url": "https://github.com/passcert-project/npm-pw-rules/issues"
+		"url": "https://github.com/passcert-project/pwrules-annotations/issues"
 	},
-	"homepage": "https://github.com/passcert-project/npm-pw-rules#readme",
+	"homepage": "https://github.com/passcert-project/pwrules-annotations#readme",
 	"devDependencies": {
 		"@typescript-eslint/eslint-plugin": "^4.26.0",
 		"@typescript-eslint/parser": "^4.26.0",
