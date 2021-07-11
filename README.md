@@ -1,4 +1,4 @@
-# npm-pw-rules
+# pwrules-annotations
 
 This package allows the parsing of [Apple's](https://developer.apple.com/documentation/security/password_autofill/customizing_password_autofill_rules) password rules.
 
