@@ -8,6 +8,6 @@
 		"tsc": "tsc -p tsconfig.json"
 	},
 	"dependencies": {
-		"@passcert/pwrules-annotations": "file:.."
+		"@passcert/pwrules-annotations": "^1.0.0"
 	}
 }
