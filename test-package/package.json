@@ -1,0 +1,13 @@
+{
+	"type": "module",
+	"devDependencies": {
+		"eslint": "^7.27.0",
+		"typescript": "^4.3.2"
+	},
+	"scripts": {
+		"tsc": "tsc -p tsconfig.json"
+	},
+	"dependencies": {
+		"pwrules-annotations": "file:.."
+	}
+}

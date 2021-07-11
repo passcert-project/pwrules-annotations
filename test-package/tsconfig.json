@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"target": "ES2015",
+		"module": "ES2020",
+		"noImplicitAny": false,
+		"sourceMap": true,
+		"outDir": "test",
+		"moduleResolution": "node",
+		"noEmit": false
+	}
+}
+// module: ES2020 -> ES packages; gotta have the option type:"module" in package.json
+// module: commonjs -> commonJS; gotta have the option type:"commonjs" (or nothing, since its default) in package.json

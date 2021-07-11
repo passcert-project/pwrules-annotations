@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"target": "ES2017",
+		"module": "ES2020",
+		"esModuleInterop": true,
+		"moduleResolution": "node",
+		"sourceMap": true,
+		"outDir": "./lib/esm",
+		"declaration": true
+	},
+	"lib": ["es2015"],
+	"include": ["./src"]
+}
