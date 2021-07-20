@@ -7,7 +7,7 @@ import { CHARACTER_CLASS_END_SENTINEL, CHARACTER_CLASS_START_SENTINEL, Identifie
 import { NamedCharacterData } from './data/namedCharacterData';
 import { RuleData } from './data/ruleData';
 
-export class PasswordRulesParserService {
+export class PasswordRulesParser {
 
     /**
      * Get all the rules in the provided @param input string.

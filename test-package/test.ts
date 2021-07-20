@@ -1,6 +1,6 @@
-import { CustomCharacterData, NamedCharacterData, PasswordRulesParserService, RuleData } from "pwrules-annotations";
+import { CustomCharacterData, NamedCharacterData, PasswordRulesParser, RuleData } from "@passcert/pwrules-annotations";
 
-let x = new PasswordRulesParserService();
+let x = new PasswordRulesParser();
 
 let y = x.parsePasswordRules("minlength: 21; required: lower, upper, digit; required: [!], [%];", false);
 
