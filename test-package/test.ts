@@ -19,9 +19,3 @@ y.forEach((i: RuleData) => {
         console.log(`${i}`);
     }
 });
-
-console.log("i will try to exec");
-const child = exec('echo "The \\$HOME variable is $HOME"');
-child.stdout.on('data', (data) => {
-    console.log(data);
-})
