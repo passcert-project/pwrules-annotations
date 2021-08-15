@@ -645,4 +645,3 @@ export class PasswordRulesParser {
 
     //#endregion
 }
-
