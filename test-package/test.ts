@@ -1,5 +1,10 @@
+/* import { PasswordRulesParser } from "../src/app.js";
+import { CustomCharacterData } from "../src/data/customCharacterData.js";
+import { NamedCharacterData } from "../src/data/namedCharacterData.js";
+import { RuleData } from "../src/data/ruleData.js"; */
+
 import { CustomCharacterData, NamedCharacterData, PasswordRulesParser, RuleData } from "@passcert/pwrules-annotations";
-import { exec } from 'child_process';
+
 
 let x = new PasswordRulesParser();
 
