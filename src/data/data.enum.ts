@@ -14,6 +14,7 @@ export const RuleName = {
     REQUIRED: "required",
     MIN_LENGTH: "minlength",
     MAX_LENGTH: "maxlength",
+    MIN_CLASSES: "minclasses",
 };
 
 export const CHARACTER_CLASS_START_SENTINEL = "[";

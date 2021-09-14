@@ -27,6 +27,7 @@ export class PasswordRulesParser {
         let minimumMaximumConsecutiveCharacters = null;
         let maximumMinLength = 0;
         let minimumMaxLength = null;
+        let actualMinClasses = null;
 
         // create the final array with concatenated rules
         // if "suppressCopyingRequiredToAllowed" is set to false, copy the required classes to the allowed rule as well.
@@ -55,6 +56,10 @@ export class PasswordRulesParser {
                 case RuleName.ALLOWED:
                     newAllowedValues = newAllowedValues.concat(rule.value);
                     break;
+
+                case RuleName.MIN_CLASSES:
+                    actualMinClasses = rule.value;
+                    break;
             }
         }
         newAllowedValues = this._canonicalizedPropertyValues(newAllowedValues, suppressCopyingRequiredToAllowed);
@@ -75,6 +80,13 @@ export class PasswordRulesParser {
 
         if (minimumMaxLength !== null) {
             newPasswordRules.push(new RuleData(RuleName.MAX_LENGTH, minimumMaxLength));
+        }
+        if (actualMinClasses >= 1 && actualMinClasses <= 4) {
+            newPasswordRules.push(new RuleData(RuleName.MIN_CLASSES, actualMinClasses));
+        } else if (actualMinClasses < 1) {
+            newPasswordRules.push(new RuleData(RuleName.MIN_CLASSES, 1));
+        } else {
+            newPasswordRules.push(new RuleData(RuleName.MIN_CLASSES, 4));
         }
         return newPasswordRules;
     }
@@ -545,6 +557,14 @@ export class PasswordRulesParser {
                 }
                 return [new RuleData(property.name, property.propValue), position];
             }
+            case RuleName.MIN_CLASSES: {
+                let [minClasses, index] = this._parseMinClassesPropertyValue(input, position);
+                position = index;
+                if (minClasses) {
+                    property.propValue = minClasses;
+                }
+                return [new RuleData(property.name, property.propValue), position];
+            }
         }
         console.assert(false, SHOULD_NOT_BE_REACHED);
     }
@@ -566,6 +586,16 @@ export class PasswordRulesParser {
      * @returns The value for the rule and the last position analyzed.
      */
     private _parseMaxConsecutivePropertyValue(input: string, position: number): [number, number] {
+        return this._parseInteger(input, position);
+    }
+
+    /**
+     * Parse the values given to the rules "minclasses".
+     * @param input The string that contains the rules to be parsed. 
+     * @param position The position from where to start parsing the input.
+     * @returns The value for the rule and the last position analyzed.
+     */
+    private _parseMinClassesPropertyValue(input: string, position: number): [number, number] {
         return this._parseInteger(input, position);
     }
 
