@@ -9,6 +9,7 @@ export const Identifier = {
 
 export const BlockListIdentifier = {
     HIBP: "hibp",
+    DEFAULT: "default",
 }
 
 export const RuleName = {

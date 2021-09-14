@@ -55,6 +55,9 @@ export class PasswordRulesParser {
                 case RuleName.ALLOWED:
                     newAllowedValues = newAllowedValues.concat(rule.value);
                     break;
+                case RuleName.BLOCK_LIST:
+                    newPasswordRules.push(new RuleData(RuleName.BLOCK_LIST, rule.value));
+
             }
         }
         newAllowedValues = this._canonicalizedPropertyValues(newAllowedValues, suppressCopyingRequiredToAllowed);
@@ -76,6 +79,7 @@ export class PasswordRulesParser {
         if (minimumMaxLength !== null) {
             newPasswordRules.push(new RuleData(RuleName.MAX_LENGTH, minimumMaxLength));
         }
+
         return newPasswordRules;
     }
 
