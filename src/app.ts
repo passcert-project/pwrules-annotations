@@ -7,10 +7,10 @@ import { BlockListIdentifier, CHARACTER_CLASS_END_SENTINEL, CHARACTER_CLASS_STAR
 import { NamedCharacterData } from './data/namedCharacterData';
 import { RuleData } from './data/ruleData';
 
-export class PasswordRulesParserService {
+export class PasswordRulesParser {
 
     /**
-     * Get all the rules in the provided @param input string.
+     * Get all the rules in the provided input string.
      * @param input The string that contains the rules to be parsed.
      * @param formatRulesForMinifiedVersion True if the "allowed" rule should not contain the classes of the "required" rule as well. False if it should.
      * @returns An array of rules ready to be used by the programmer.
@@ -83,8 +83,8 @@ export class PasswordRulesParserService {
 
     /**
      * Check if the character received is a letter.
-     * @param c - The character to analyze.
-     * @returns - True if the @param c is an identifier character and False if not.
+     * @param c The character to analyze.
+     * @returns True if the c is an identifier character and False if not.
      */
     private _isIdentifierCharacter(c: string): boolean {
         console.assert(c.length === 1);
@@ -93,8 +93,8 @@ export class PasswordRulesParserService {
 
     /**
      * Check if the character received is a digit.
-     * @param c - The character to analyze.
-     * @returns - True if the @param c is a digit and False if not.
+     * @param c The character to analyze.
+     * @returns True if the c is a digit and False if not.
      */
     private _isASCIIDigit(c: string): boolean {
         console.assert(c.length === 1);
@@ -103,8 +103,8 @@ export class PasswordRulesParserService {
 
     /**
      * Check if the character received is an ASCII printable character - special character.
-     * @param c - The character to analyze.
-     * @returns - True if the @param c is an ASCII printable character and False if not.
+     * @param c The character to analyze.
+     * @returns True if the c is an ASCII printable character and False if not.
      */
     private _isASCIIPrintableCharacter(c: string): boolean {
         console.assert(c.length === 1);
@@ -113,8 +113,8 @@ export class PasswordRulesParserService {
 
     /**
      * Check if the character received is a white space character.
-     * @param c - The character to analyze.
-     * @returns - True if the @param c is a white space character and False if not.
+     * @param c The character to analyze.
+     * @returns True if the c is a white space character and False if not.
      */
     private _isASCIIWhitespace(c: string): boolean {
         console.assert(c.length === 1);
@@ -136,7 +136,7 @@ export class PasswordRulesParserService {
     }
 
     /**
-    * Get the character correspondent to the adapted ASCII code provided in @param index. 
+    * Get the character correspondent to the adapted ASCII code provided in index. 
     * @param index The adapted ASCII code to analyze.
     * @returns The character correspondent to the given adapted ASCII code.
     */
@@ -145,7 +145,7 @@ export class PasswordRulesParserService {
     }
 
     /**
-     * Sets the value of an interval of the @param bitSet to true, depending on which @param namedCharacterClass it's analyzing.
+     * Sets the value of an interval of the bitSet to true, depending on which namedCharacterClass it's analyzing.
      * Example: For the "upper" character class, it will set to True the indexes that correspond to the ASCII value of the upper case letters. 
      * @param bitSet An array with the size of the printable characters. 
      * @param namedCharacterClass The character class to analyze - "upper", "lower", "digit", "special".
@@ -175,7 +175,7 @@ export class PasswordRulesParserService {
     }
 
     /**
-     * Sets the value of an interval of the @param bitSet to true, depending on which @param customCharacterClass it's analyzing.
+     * Sets the value of an interval of the bitset to true, depending on which customCharacterClass it's analyzing.
      * @param bitSet An array with the size of the printable characters.
      * @param customCharacterClass A custom character class.
      */
@@ -318,7 +318,7 @@ export class PasswordRulesParserService {
     //#region Parser functions
 
     /**
-     * Get the next index in the @param input which is not a white space.
+     * Get the next index in the input which is not a white space.
      * @param input The string that contains the rules to be parsed.
      * @param index The index of the input to check. 
      * @returns The index of the next character that is not a white space character.
@@ -640,7 +640,7 @@ export class PasswordRulesParserService {
     /**
      * Get all the rules found in the description.
      * @param input The string that contains the rules to be parsed. 
-     * @returns All the rules found in the @param input.
+     * @returns All the rules found in the input.
      */
     private _parsePasswordRulesInternal(input: string): RuleData[] {
         let parsedProperties: RuleData[] = [];
@@ -682,4 +682,3 @@ export class PasswordRulesParserService {
 
     //#endregion
 }
-

@@ -1,6 +1,7 @@
 {
-	"type": "module",
+	"type": "commonjs",
 	"devDependencies": {
+		"@types/node": "^16.4.3",
 		"eslint": "^7.27.0",
 		"typescript": "^4.3.2"
 	},
@@ -8,6 +9,6 @@
 		"tsc": "tsc -p tsconfig.json"
 	},
 	"dependencies": {
-		"pwrules-annotations": "file:.."
+		"@passcert/pwrules-annotations": "^1.1.0"
 	}
 }

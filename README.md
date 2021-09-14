@@ -7,7 +7,7 @@ You can use this [tool](https://developer.apple.com/password-rules/) to test out
 
 # Usage
 
-1. Run the command `npm install pwrules-annotations`
+1. Run the command `npm i @passcert/pwrules-annotations`
 
 2. In your `package.json`, check what is the value of the property `type`
 

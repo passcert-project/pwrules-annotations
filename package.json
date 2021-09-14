@@ -1,5 +1,5 @@
 {
-	"name": "pwrules-annotations",
+	"name": "@passcert/pwrules-annotations",
 	"version": "1.1.0",
 	"description": "This package allows the parsing of Apple's password rules.",
 	"main": "./lib/cjs/index.js",
@@ -10,7 +10,8 @@
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"tsc": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
-		"prepublish": "npm run tsc"
+		"prepublish": "npm run tsc",
+        "test-program": "cd test-package && npm run tsc"
 	},
 	"repository": {
 		"type": "git",
