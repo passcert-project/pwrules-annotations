@@ -1,11 +1,13 @@
-// Copyright (c) 2019 - 2020 Apple Inc. Licensed under MIT License.
+// Copyright (c) 2019 - 2021 Apple Inc. Licensed under MIT License.
 // Adapted to typescript and Bitwarden by João Miguel P. Campos (github @mikibakaiki) for PassCert project.
 // npm package by João Miguel P. Campos (github @mikibakaiki) for PassCert project.
 
+import { PasswordBlocklist } from './data/passwordBlocklist';
 import { CustomCharacterData } from './data/customCharacterData';
 import { BlockListIdentifier, CHARACTER_CLASS_END_SENTINEL, CHARACTER_CLASS_START_SENTINEL, Identifier, PROPERTY_SEPARATOR, PROPERTY_VALUE_SEPARATOR, PROPERTY_VALUE_START_SENTINEL, RuleName, SHOULD_NOT_BE_REACHED, SPACE_CODE_POINT } from './data/data.enum';
 import { NamedCharacterData } from './data/namedCharacterData';
 import { RuleData } from './data/ruleData';
+
 
 export class PasswordRulesParser {
 
@@ -493,7 +495,7 @@ export class PasswordRulesParser {
     }
 
     /**
-     * Parse the values given to the rule "blocklist".
+     * Parse the values given to the rule "blocklist". If it's 'default', there is a list with the 100 000 most commonly used passwords. 
      * @param input The string that contains the rules to be parsed.
      * @param position The position from where to start parsing the input.
      * @returns Returns an array with the information about the blocklist and the last position analyzed
@@ -508,7 +510,15 @@ export class PasswordRulesParser {
                 console.error("Unrecognized property value identifier: " + propertyValue);
                 return [null, identifierStartPosition];
             }
-            propertyValues.push(propertyValue);
+            // TODO maybe here we can fetch the default word list and make this the value of the rule: an array of all the words
+            if (propertyValue === 'default') {
+                const passwordBlocklist = PasswordBlocklist.getInstance();
+                passwordBlocklist.blocklist.forEach(pw => {
+                    propertyValues.push(pw);
+                })
+            } else {
+                propertyValues.push(propertyValue);
+            }
         }
         return [propertyValues, position];
     }
