@@ -12,6 +12,8 @@ import { RuleData } from "../src/data/ruleData.js";
 /* let blist = PasswordBlocklist.getInstance();
 blist.blocklist = ['1', '2', '3']; */
 
+// "minlength: 21; required: lower, upper, digit; required: [!], [%]; minclasses: 0;"
+
 let x = new PasswordRulesParser();
 let y = x.parsePasswordRules("minlength: 21; blocklist: default; required: [%&3L];", false);
 

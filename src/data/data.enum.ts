@@ -18,6 +18,7 @@ export const RuleName = {
     REQUIRED: "required",
     MIN_LENGTH: "minlength",
     MAX_LENGTH: "maxlength",
+    MIN_CLASSES: "minclasses",
     BLOCK_LIST: "blocklist",
 };
 
