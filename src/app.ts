@@ -1,11 +1,13 @@
-// Copyright (c) 2019 - 2020 Apple Inc. Licensed under MIT License.
+// Copyright (c) 2019 - 2021 Apple Inc. Licensed under MIT License.
 // Adapted to typescript and Bitwarden by João Miguel P. Campos (github @mikibakaiki) for PassCert project.
 // npm package by João Miguel P. Campos (github @mikibakaiki) for PassCert project.
 
+import { PasswordBlocklist } from './data/passwordBlocklist';
 import { CustomCharacterData } from './data/customCharacterData';
-import { CHARACTER_CLASS_END_SENTINEL, CHARACTER_CLASS_START_SENTINEL, Identifier, PROPERTY_SEPARATOR, PROPERTY_VALUE_SEPARATOR, PROPERTY_VALUE_START_SENTINEL, RuleName, SHOULD_NOT_BE_REACHED, SPACE_CODE_POINT } from './data/data.enum';
+import { BlockListIdentifier, CHARACTER_CLASS_END_SENTINEL, CHARACTER_CLASS_START_SENTINEL, Identifier, PROPERTY_SEPARATOR, PROPERTY_VALUE_SEPARATOR, PROPERTY_VALUE_START_SENTINEL, RuleName, SHOULD_NOT_BE_REACHED, SPACE_CODE_POINT } from './data/data.enum';
 import { NamedCharacterData } from './data/namedCharacterData';
 import { RuleData } from './data/ruleData';
+
 
 export class PasswordRulesParser {
 
@@ -55,6 +57,9 @@ export class PasswordRulesParser {
                 case RuleName.ALLOWED:
                     newAllowedValues = newAllowedValues.concat(rule.value);
                     break;
+                case RuleName.BLOCK_LIST:
+                    newPasswordRules.push(new RuleData(RuleName.BLOCK_LIST, rule.value));
+
             }
         }
         newAllowedValues = this._canonicalizedPropertyValues(newAllowedValues, suppressCopyingRequiredToAllowed);
@@ -76,6 +81,7 @@ export class PasswordRulesParser {
         if (minimumMaxLength !== null) {
             newPasswordRules.push(new RuleData(RuleName.MAX_LENGTH, minimumMaxLength));
         }
+
         return newPasswordRules;
     }
 
@@ -369,6 +375,14 @@ export class PasswordRulesParser {
         return identifier && Object.values(Identifier).includes(identifier.toLowerCase());
     }
 
+    /**
+     * Check if the identifier is a valid one for the "blocklist" rule.
+     * @param identifier The identifier to verify.
+     * @returns True if it is a valid identifier. False if it is not a valid identifier.
+     */
+    private _isValidBlockListPropertyValueIdentifier(identifier: string): boolean {
+        return identifier && Object.values(BlockListIdentifier).includes(identifier.toLowerCase());
+    }
 
     /**
      * Parse a custom character class. These classes are defined by the user and are surrounded by squared brackets ([]).
@@ -481,6 +495,35 @@ export class PasswordRulesParser {
     }
 
     /**
+     * Parse the values given to the rule "blocklist". If it's 'default', there is a list with the 100 000 most commonly used passwords. 
+     * @param input The string that contains the rules to be parsed.
+     * @param position The position from where to start parsing the input.
+     * @returns Returns an array with the information about the blocklist and the last position analyzed
+     */
+    private _parseBlockListPropertyValue(input: string, position: number): [string[], number] {
+        let propertyValues = [];
+        if (this._isIdentifierCharacter(input[position])) {
+            let identifierStartPosition = position;
+            let [propertyValue, index] = this._parseIdentifier(input, position);
+            position = index;
+            if (!this._isValidBlockListPropertyValueIdentifier(propertyValue)) {
+                console.error("Unrecognized property value identifier: " + propertyValue);
+                return [null, identifierStartPosition];
+            }
+            // TODO maybe here we can fetch the default word list and make this the value of the rule: an array of all the words
+            if (propertyValue === 'default') {
+                const passwordBlocklist = PasswordBlocklist.getInstance();
+                passwordBlocklist.blocklist.forEach(pw => {
+                    propertyValues.push(pw);
+                })
+            } else {
+                propertyValues.push(propertyValue);
+            }
+        }
+        return [propertyValues, position];
+    }
+
+    /**
      * Parse a password rule.
      * @param input The string that contains the rules to be parsed.
      * @param position The position from where to start parsing the input.
@@ -542,6 +585,14 @@ export class PasswordRulesParser {
                 position = index;
                 if (minMaxLength) {
                     property.propValue = minMaxLength;
+                }
+                return [new RuleData(property.name, property.propValue), position];
+            }
+            case RuleName.BLOCK_LIST: {
+                let [blocklist, index] = this._parseBlockListPropertyValue(input, position);
+                position = index;
+                if (blocklist) {
+                    property.propValue = blocklist;
                 }
                 return [new RuleData(property.name, property.propValue), position];
             }

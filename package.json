@@ -9,9 +9,10 @@
 	],
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"tsc": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
+		"tsc": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json && npm run copy-blocklist-data",
 		"prepublish": "npm run tsc",
-        "test-program": "cd test-package && npm run tsc"
+		"test-program": "cd test-package && npm run tsc",
+        "copy-blocklist-data":"echo \"./lib/cjs/data/ ./lib/esm/data\" | xargs -n 1 cp -v src/data/*.txt"
 	},
 	"repository": {
 		"type": "git",
@@ -28,5 +29,8 @@
 		"@typescript-eslint/parser": "^4.26.0",
 		"eslint": "^7.27.0",
 		"typescript": "^4.3.2"
+	},
+	"dependencies": {
+		"@types/node": "^16.9.1"
 	}
 }
