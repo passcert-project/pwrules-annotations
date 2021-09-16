@@ -13,7 +13,7 @@ import { RuleData } from "../src/data/ruleData.js";
 blist.blocklist = ['1', '2', '3']; */
 
 let x = new PasswordRulesParser();
-let y = x.parsePasswordRules("minlength: 21; blocklist: hibp; required: [%&3L];", false);
+let y = x.parsePasswordRules("minlength: 21; blocklist: default; required: [%&3L];", false);
 
 y.forEach((i: RuleData) => {
     console.log("RULE DATA => ", i);
