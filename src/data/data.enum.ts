@@ -7,6 +7,10 @@ export const Identifier = {
     UPPER: "upper",
 };
 
+export const BlockListIdentifier = {
+    HIBP: "hibp",
+    DEFAULT: "default",
+}
 
 export const RuleName = {
     ALLOWED: "allowed",
@@ -15,6 +19,7 @@ export const RuleName = {
     MIN_LENGTH: "minlength",
     MAX_LENGTH: "maxlength",
     MIN_CLASSES: "minclasses",
+    BLOCK_LIST: "blocklist",
 };
 
 export const CHARACTER_CLASS_START_SENTINEL = "[";
