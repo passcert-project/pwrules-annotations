@@ -4,7 +4,7 @@
 
 import { PasswordBlocklist } from './data/passwordBlocklist';
 import { CustomCharacterData } from './data/customCharacterData';
-import { BlockListIdentifier, CHARACTER_CLASS_END_SENTINEL, CHARACTER_CLASS_START_SENTINEL, Identifier, PROPERTY_SEPARATOR, PROPERTY_VALUE_SEPARATOR, PROPERTY_VALUE_START_SENTINEL, RuleName, SHOULD_NOT_BE_REACHED, SPACE_CODE_POINT } from './data/data.enum';
+import { BlockListIdentifier, CHARACTER_CLASS_END_SENTINEL, CHARACTER_CLASS_START_SENTINEL, CHARACTER_RANGE_END_SENTINEL, CHARACTER_RANGE_START_SENTINEL, Identifier, PROPERTY_SEPARATOR, PROPERTY_VALUE_SEPARATOR, PROPERTY_VALUE_START_SENTINEL, RuleName, SHOULD_NOT_BE_REACHED, SPACE_CODE_POINT } from './data/data.enum';
 import { NamedCharacterData } from './data/namedCharacterData';
 import { RuleData } from './data/ruleData';
 
@@ -49,6 +49,11 @@ export class PasswordRulesParser {
 
                 case RuleName.REQUIRED:
                     rule.value = this._canonicalizedPropertyValues(rule.value, formatRulesForMinifiedVersion);
+                    rule.value.forEach(element => {
+                        if (element.minChars < 1) {
+                            element.minChars = 1;
+                        }
+                    });
                     newPasswordRules.push(rule);
                     if (!suppressCopyingRequiredToAllowed) {
                         newAllowedValues = newAllowedValues.concat(rule.value);
@@ -315,19 +320,34 @@ export class PasswordRulesParser {
             return [new NamedCharacterData(Identifier.ASCII_PRINTABLE)];
         }
         if (hasAllUpper) {
-            result.push(new NamedCharacterData(Identifier.UPPER));
+            let newNamedClass = propertyValues.filter(x => x.type === 'NamedCharacterData' && x.name === Identifier.UPPER)[0];
+
+            result.push(newNamedClass);
         }
         if (hasAllLower) {
-            result.push(new NamedCharacterData(Identifier.LOWER));
+            let newNamedClass = propertyValues.filter(x => x.type === 'NamedCharacterData' && x.name === Identifier.LOWER)[0];
+            result.push(newNamedClass);
+            /* result.push(new NamedCharacterData(Identifier.LOWER)); */
         }
         if (hasAllDigits) {
-            result.push(new NamedCharacterData(Identifier.DIGIT));
+            let newNamedClass = propertyValues.filter(x => x.type === 'NamedCharacterData' && x.name === Identifier.DIGIT)[0];
+            result.push(newNamedClass);
+            // result.push(new NamedCharacterData(Identifier.DIGIT));
         }
         if (hasAllSpecial) {
-            result.push(new NamedCharacterData(Identifier.SPECIAL));
+            let newNamedClass = propertyValues.filter(x => x.type === 'NamedCharacterData' && x.name === Identifier.SPECIAL)[0];
+            result.push(newNamedClass);
+            // result.push(new NamedCharacterData(Identifier.SPECIAL));
         }
         if (charactersSeen.length) {
-            result.push(new CustomCharacterData(charactersSeen));
+            let newNamedClass: CustomCharacterData;
+            charactersSeen.forEach(cs => {
+                newNamedClass = propertyValues.filter(x => x.type === 'CustomCharacterData' && x.characters.includes(cs))[0];
+                if (!result.includes(newNamedClass)) {
+                    result.push(newNamedClass);
+                }
+            })
+            /* result.push(new CustomCharacterData(charactersSeen)); */
         }
         return result;
     }
@@ -378,6 +398,56 @@ export class PasswordRulesParser {
 
         return [seenIdentifiers.join(""), position];
     }
+
+    /**
+     * Parses the identifier of each rule. 
+     * @param input The string that contains the rules to be parsed.
+     * @param position The position from where to start parsing the input.
+     * @returns The name of the identifier and the last position analyzed.
+     */
+    private _parseRange(input: string, position: number): [string, number] {
+        console.assert(position >= 0);
+        console.assert(position < input.length);
+        // console.assert(this._isIdentifierCharacter(input[position]));
+
+        let length = input.length;
+        let seenRange = [];
+        let result = 0;
+        do {
+
+            if (input[position] === CHARACTER_RANGE_START_SENTINEL || this._isASCIIWhitespace(input[position])) {
+                console.log("am special, should skip - before => ", position);
+                ++position;
+                console.log("am special, should skip - after => ", position);
+                continue;
+            }
+
+            // if we see a whitespace or a comma, then we can push the result integer to the list. 
+            // useful for integer > 9
+            if (input[position] === PROPERTY_VALUE_SEPARATOR) {
+                console.log("result , or space => ", result);
+                seenRange.push(result);
+                result = 0;
+                ++position;
+                continue;
+            }
+
+            if (input[position] === CHARACTER_RANGE_END_SENTINEL) {
+                console.log("result ) => ", result);
+                seenRange.push(result);
+                result = 0;
+                break;
+            }
+            if (this._isASCIIDigit(input[position])) {
+                result = 10 * result + parseInt(input[position], 10);
+            }
+
+            ++position;
+        } while (position < length);
+
+        return [seenRange.join(","), position];
+    }
+
 
     /**
      * Check if the identifier is a valid one for the "required" and "allowed" rules.
@@ -474,12 +544,32 @@ export class PasswordRulesParser {
                     return [null, identifierStartPosition];
                 }
                 propertyValues.push(new NamedCharacterData(propertyValue));
+                position = this._indexOfNonWhitespaceCharacter(input, position);
+                if (input[position] === CHARACTER_RANGE_START_SENTINEL) {
+                    let [range, index] = this._parseRange(input, position);
+                    // because the index returns the position of ), we add 1 position, so the parsing can continue
+                    position = index + 1;
+                    let minMaxChars = range.split(',');
+                    let lastPushedNamedClass = propertyValues[propertyValues.length - 1] as NamedCharacterData;
+                    lastPushedNamedClass.minChars = minMaxChars[0];
+                    lastPushedNamedClass.maxChars = minMaxChars[1];
+                }
             }
-            else if (input[position] == CHARACTER_CLASS_START_SENTINEL) {
+            else if (input[position] === CHARACTER_CLASS_START_SENTINEL) {
                 let [propertyValueArray, index] = this._parseCustomCharacterClass(input, position);
                 position = index;
                 if (propertyValueArray && propertyValueArray.length) {
                     propertyValues.push(new CustomCharacterData(propertyValueArray));
+                }
+                if (input[position] === CHARACTER_RANGE_START_SENTINEL) {
+                    position = this._indexOfNonWhitespaceCharacter(input, position);
+                    let [range, index] = this._parseRange(input, position);
+                    // because the index returns the position of ), we add 1 position, so the parsing can continue
+                    position = index + 1;
+                    let minMaxChars = range.split(',');
+                    let lastPushedNamedClass = propertyValues[propertyValues.length - 1] as CustomCharacterData;
+                    lastPushedNamedClass.minChars = minMaxChars[0];
+                    lastPushedNamedClass.maxChars = minMaxChars[1];
                 }
             }
             else {
@@ -552,6 +642,7 @@ export class PasswordRulesParser {
         let mayBeIdentifierStartPosition = position;
         let [identifier, index] = this._parseIdentifier(input, position);
         position = index;
+        // identifier is a word. if it doesn't exist, throw error.
         if (!Object.values(RuleName).includes(identifier)) {
             console.error("Unrecognized property name: " + identifier);
             return [null, mayBeIdentifierStartPosition];
@@ -709,6 +800,12 @@ export class PasswordRulesParser {
                 break;
             }
 
+            /* // check if the next character is either a "(". 
+            if (input[position] === CHARACTER_RANGE_START_SENTINEL) {
+                position = this._indexOfNonWhitespaceCharacter(input, position);
+
+            } */
+            // check if the next character is a ",". 
             if (input[position] === PROPERTY_SEPARATOR) {
                 position = this._indexOfNonWhitespaceCharacter(input, position + 1);
                 if (position >= length) {

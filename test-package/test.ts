@@ -13,21 +13,24 @@ import { RuleData } from "../src/data/ruleData.js";
 blist.blocklist = ['1', '2', '3']; */
 
 // "minlength: 21; required: lower, upper, digit; required: [!], [%]; minclasses: 0;"
-
+// "allowed: lower ( 0 , 10 ) , upper, digit; required: [!](1,5), [%];"
+// "required: [!?.](0,5), [%]; required:[$](0,2); allowed: lower(1, 10);"
 let x = new PasswordRulesParser();
-let y = x.parsePasswordRules("minlength: 21; blocklist: default; required: [%&3L];", false);
+let z = x.parsePasswordRules("required: [!?.], [%];", false);
+console.log(z);
+/* let y = x.parsePasswordRules("minlength: 21; blocklist: default; required: [%&3L];", false);
 
 y.forEach((i: RuleData) => {
     console.log("RULE DATA => ", i);
     if (i.value instanceof Array) {
-        /* console.log(`Rule Name: ${i.name}`) */
+        // console.log(`Rule Name: ${i.name}`)
         i.value.forEach((v: NamedCharacterData | CustomCharacterData) => {
             if (v instanceof CustomCharacterData) {
                 console.log(`Characters: ${v.characters}; `);
             }
-            /* console.log(`Value: ${v}; `); */
+            // console.log(`Value: ${v}; `);
         });
     } else {
         console.log(`${i}`);
     }
-});
+}); */
