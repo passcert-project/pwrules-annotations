@@ -12,12 +12,13 @@ import { RuleData } from "../src/data/ruleData.js";
 /* let blist = PasswordBlocklist.getInstance();
 blist.blocklist = ['1', '2', '3']; */
 
-// "minlength: 21; required: lower, upper, digit; required: [!], [%]; minclasses: 0;"
-// "allowed: lower ( 0 , 10 ) , upper, digit; required: [!](1,5), [%];"
-// "required: [!?.](0,5), [%]; required:[$](0,2); allowed: lower(1, 10);"
+
+// TODO: use this rule after required: lower(0, 1);required: upper (1,1); required: digit(1,1); required: special(1,1); minlength: 10;
 let x = new PasswordRulesParser();
-let z = x.parsePasswordRules("required: [!?.], [%];", false);
+let z = x.parsePasswordRules("required: lower(0, 1);required: upper (1,1); required: digit(1,1); minlength: 10;", false);
 console.log(z);
+console.log(z[0].value);
+console.log(z[1].value);
 /* let y = x.parsePasswordRules("minlength: 21; blocklist: default; required: [%&3L];", false);
 
 y.forEach((i: RuleData) => {

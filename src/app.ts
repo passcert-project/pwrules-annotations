@@ -22,7 +22,7 @@ export class PasswordRulesParser {
 
         // When formatting rules for minified version, we should keep the formatted rules
         // as similar to the input as possible. Avoid copying required rules to allowed rules.
-        const suppressCopyingRequiredToAllowed = formatRulesForMinifiedVersion;
+        let suppressCopyingRequiredToAllowed = formatRulesForMinifiedVersion;
 
         let newPasswordRules: RuleData[] = [];
         let newAllowedValues: any[] = [];
@@ -50,17 +50,29 @@ export class PasswordRulesParser {
                 case RuleName.REQUIRED:
                     rule.value = this._canonicalizedPropertyValues(rule.value, formatRulesForMinifiedVersion);
                     rule.value.forEach(element => {
-                        if (element.minChars < 1) {
-                            element.minChars = 1;
+                        if (Number(element.minChars) < 1) {
+                            element.minChars = '1';
+                        }
+                        // if it has a range, don't copy it to the allowed rule.
+                        // FIXME: With or without range, the required MUST be copied to the allowed.
+                        // Just remove the range and should be fine
+                        if (element.minChars && element.maxChars) {
+                            suppressCopyingRequiredToAllowed = true;
                         }
                     });
                     newPasswordRules.push(rule);
                     if (!suppressCopyingRequiredToAllowed) {
                         newAllowedValues = newAllowedValues.concat(rule.value);
                     }
+                    suppressCopyingRequiredToAllowed = formatRulesForMinifiedVersion;
                     break;
 
                 case RuleName.ALLOWED:
+                    rule.value.forEach(element => {
+                        if (Number(element.minChars) >= 1) {
+                            element.minChars = '0';
+                        }
+                    });
                     newAllowedValues = newAllowedValues.concat(rule.value);
                     break;
 
@@ -73,6 +85,7 @@ export class PasswordRulesParser {
             }
         }
         newAllowedValues = this._canonicalizedPropertyValues(newAllowedValues, suppressCopyingRequiredToAllowed);
+        // TODO: problem here, got to find out how to fix. Pushing the ascii-printable thing into allowed
         if (!suppressCopyingRequiredToAllowed && !newAllowedValues.length) {
             newAllowedValues = [new NamedCharacterData(Identifier.ASCII_PRINTABLE)];
         }
@@ -98,6 +111,161 @@ export class PasswordRulesParser {
             newPasswordRules.push(new RuleData(RuleName.MIN_CLASSES, 1));
         } else {
             newPasswordRules.push(new RuleData(RuleName.MIN_CLASSES, 4));
+        }
+
+        // adapt all the maxChars values to the existence of maxlength and max-consecutive
+        // there are some edge case scenarios that need to be taken into account here. For example:
+
+        // required: lower(0,10); minlength: 12; -- HANDLED
+        // required: lower(10,10); minlength: 12; - Kinda ok, needs revisiting
+        // required: lower(0,10), digit; minlength: 12; -- HANDLED
+        // required: lower(0,5), digit(1,5); minlength: 12; -- HANDLED
+        // required: lower(10,10); maxlength: 9; -- HANDLED
+        // required: lower(5, 10); maxlength: 4; -- HANDLED
+        // required: lower() -- HANDLED
+        // required: lower(0,0); -- HANDLED
+        // required: lower(0, 1), upper (1,1), digit(1,1), special(1,1); minlength: 10; -- HANDLED -> but there may be variations worth exploring
+
+        // if the the sum of the maxchars of every required class is < minlength => remove all ranges and add each class to the allowed rules too. -- HANDLED
+        // if the sum of the minchars of every required class is > maxlength => remove all ranges and add each class to the allowed rules too. -- HANDLED
+        // if the min and maxchars are the same and > 0 and they are < minlength => remove ranges and add to the allowed rules too -- HANDLED
+        // if the min and maxchars are the same and > 0 and they are > maxlength => remove ranges and add to the allowed rules too -- HANDLED
+
+        //FIXME: adjust the rules on the next if to this one!
+        if (minimumMaxLength !== null) {
+            let maxCharsTotal = 0;
+            newPasswordRules.filter(rule => rule.name === RuleName.REQUIRED)
+                .forEach(rr => {
+                    rr.value.forEach(rt => {
+                        maxCharsTotal += Number(rt.minChars);
+                    });
+                });
+
+            if (maxCharsTotal > minimumMaxLength) {
+                let classNamesToAddToAllowed: string[] = [];
+                newPasswordRules.filter(rule => rule.name === RuleName.REQUIRED)
+                    .forEach(rr => {
+                        rr.value.forEach(rt => {
+                            rt.minChars = undefined;
+                            rt.maxChars = undefined;
+                            classNamesToAddToAllowed.push(rt.name);
+                        });
+                    });
+
+                // add the classes that we removed the range to the Allowed rule
+                // -1 means there is no allowed rule yet
+                let allowedIndex = newPasswordRules.findIndex(r => r.name === RuleName.ALLOWED);
+                if (allowedIndex !== -1) {
+                    classNamesToAddToAllowed.forEach(nac => {
+                        newPasswordRules[allowedIndex].value.push(new NamedCharacterData(nac));
+
+                    })
+                } else {
+                    let newAllowedClasses = [];
+
+                    classNamesToAddToAllowed.forEach(nac => {
+                        newAllowedClasses.push(new NamedCharacterData(nac));
+                    })
+                    // TODO: maybe call that function that canonicalizes stuff ?? for the custom classes maybe
+                    newPasswordRules.push(new RuleData(RuleName.ALLOWED, newAllowedClasses));
+                }
+            }
+        }
+
+        // minLength checks
+        if (maximumMinLength !== null) {
+            let minCharsTotal = 0;
+            let classesSeen: string[] = [];
+            let classNamesToAddToAllowed: string[] = [];
+
+            // check for the sum of maxChars in all required rules
+            newPasswordRules.filter(rule => rule.name === RuleName.REQUIRED)
+                .forEach(rr => {
+                    rr.value.forEach(rt => {
+                        minCharsTotal += Number(rt.maxChars);
+                        classesSeen.push(rt.name);
+                    });
+                });
+            // TODO: need to check for rules of this type: required: lower; required: lower, upper;
+
+            // TODO: check required: ascii-printable(0, 15); and its minlength / maxlength variations -> THIS SHOULD NOT BE POSSIBLE!
+
+            // check that the sum of maxChars is, at least, equal to the minlength rule. 
+            // if it is not, then delete all ranges -- they were not used correctly.
+            // if all 4 classes are present in required, then substitute them for ascii-printable
+            if (minCharsTotal < maximumMinLength) {
+                // Not all 4 character classes have been seen.
+                // This means that the sum of maximum characters range is less than the minlength rule, but there are still character classes available to fill the leftover required characters, to comply with the minlength rule.
+                // Thus, we add the classes that are not used to the allowed rule.
+                // FIXME: add only the ones not required or all? if all, then it's ascii-printable
+                if (classesSeen.length < 4) {
+                    if (!classesSeen.includes(Identifier.LOWER)) {
+                        classNamesToAddToAllowed.push(Identifier.LOWER)
+                    }
+                    if (!classesSeen.includes(Identifier.UPPER)) {
+                        classNamesToAddToAllowed.push(Identifier.UPPER)
+                    }
+                    if (!classesSeen.includes(Identifier.DIGIT)) {
+                        classNamesToAddToAllowed.push(Identifier.DIGIT)
+                    }
+                    if (!classesSeen.includes(Identifier.SPECIAL)) {
+                        classNamesToAddToAllowed.push(Identifier.SPECIAL)
+                    }
+                    // updating the minclasses to the number of actually required classes
+                    newPasswordRules.find(rule => rule.name === RuleName.MIN_CLASSES).value = classesSeen.length;
+                }
+                // All 4 character classes have been seen.
+                // This means that the sum of maximum characters range is less than the minlength rule.
+                // Thus, we need to make ascii-printable required and allowed.
+                else {
+                    let numRequiredRules = newPasswordRules.filter(rule => rule.name === RuleName.REQUIRED).length;
+
+                    // there are multiple required rules, i.e., required: a; required: b; etc.
+                    if (numRequiredRules > 1) {
+                        let iter = newPasswordRules.findIndex(rule => rule.name === RuleName.REQUIRED);
+                        while (iter !== -1) {
+                            newPasswordRules.splice(iter, 1);
+                            iter = newPasswordRules.findIndex(rule => rule.name === RuleName.REQUIRED);
+                        }
+                        newPasswordRules.push(new RuleData(RuleName.REQUIRED, [new NamedCharacterData(Identifier.ASCII_PRINTABLE)]));
+                    } else if (numRequiredRules == 1) {
+                        // Only one required rule. 
+                        // Seen all 4 character classes 
+                        // Therefore, we substitute all character classes by ascii-printable
+                        let ruleIndex = newPasswordRules.findIndex(rule => rule.name === RuleName.REQUIRED);
+                        newPasswordRules[ruleIndex].value = [new NamedCharacterData(Identifier.ASCII_PRINTABLE)];
+                    }
+                    // updating the minclasses to the number of actually required classes
+                    newPasswordRules.find(rule => rule.name === RuleName.MIN_CLASSES).value = classesSeen.length;
+
+                }
+            };
+
+            // add the classes that we removed the range to the Allowed rule
+            // -1 means there is no allowed rule yet
+            let allowedIndex = newPasswordRules.findIndex(r => r.name === RuleName.ALLOWED);
+            if (allowedIndex !== -1) {
+                // TODO: check if the value is ascii-printable, or if the value we're going to push is already there!
+                newPasswordRules[allowedIndex].value.forEach(element => {
+                    if (element.name === Identifier.ASCII_PRINTABLE) {
+                        return newPasswordRules;
+                    }
+
+                    let ind = classNamesToAddToAllowed.findIndex(el => el === element.name);
+                    if (ind !== -1) {
+                        // didn't find any - this rule is not allowed, we'll add it now
+                        element.push(new NamedCharacterData(classNamesToAddToAllowed[ind]));
+                    }
+                });
+            } else {
+                let newAllowedClasses = [];
+
+                classNamesToAddToAllowed.forEach(nac => {
+                    newAllowedClasses.push(new NamedCharacterData(nac));
+                })
+                // TODO: maybe call that function that canonicalizes stuff ?? for the custom classes maybe
+                newPasswordRules.push(new RuleData(RuleName.ALLOWED, newAllowedClasses));
+            }
         }
 
         return newPasswordRules;
@@ -218,7 +386,7 @@ export class PasswordRulesParser {
 
     private _canonicalizedPropertyValues(propertyValues: any[], keepCustomCharacterClassFormatCompliant: boolean): (NamedCharacterData | CustomCharacterData)[] {
         let asciiPrintableBitSet = new Array("~".codePointAt(0) - " ".codePointAt(0) + 1);
-
+        let hasCharRange = false;
         for (let propertyValue of propertyValues) {
             if (propertyValue instanceof NamedCharacterData) {
                 if (propertyValue.name === Identifier.UNICODE) {
@@ -228,6 +396,11 @@ export class PasswordRulesParser {
                 if (propertyValue.name === Identifier.ASCII_PRINTABLE) {
                     return [new NamedCharacterData(Identifier.ASCII_PRINTABLE)];
                 }
+
+                if (propertyValue.minChars !== undefined && propertyValue.maxChars !== undefined) {
+                    hasCharRange = true;
+                }
+
 
                 this._markBitsForNamedCharacterClass(asciiPrintableBitSet, propertyValue);
             }
@@ -316,9 +489,19 @@ export class PasswordRulesParser {
         }
 
         let result = [];
-        if (hasAllUpper && hasAllLower && hasAllDigits && hasAllSpecial) {
+
+        // has all 4 classes, but some of them have ranges.
+        // this means that ascii-printable will be allowed, but there are some specific ranges that need to be fulfilled, thus, we need to return the original values parsed, for later verification.
+        if (hasAllUpper && hasAllLower && hasAllDigits && hasAllSpecial && hasCharRange) {
+            propertyValues.forEach(val => {
+                result.push(val);
+            });
+            return result;
+        } else if (hasAllUpper && hasAllLower && hasAllDigits && hasAllSpecial) {
+
             return [new NamedCharacterData(Identifier.ASCII_PRINTABLE)];
         }
+
         if (hasAllUpper) {
             let newNamedClass = propertyValues.filter(x => x.type === 'NamedCharacterData' && x.name === Identifier.UPPER)[0];
 
@@ -416,16 +599,13 @@ export class PasswordRulesParser {
         do {
 
             if (input[position] === CHARACTER_RANGE_START_SENTINEL || this._isASCIIWhitespace(input[position])) {
-                console.log("am special, should skip - before => ", position);
                 ++position;
-                console.log("am special, should skip - after => ", position);
                 continue;
             }
 
             // if we see a whitespace or a comma, then we can push the result integer to the list. 
             // useful for integer > 9
             if (input[position] === PROPERTY_VALUE_SEPARATOR) {
-                console.log("result , or space => ", result);
                 seenRange.push(result);
                 result = 0;
                 ++position;
@@ -433,7 +613,6 @@ export class PasswordRulesParser {
             }
 
             if (input[position] === CHARACTER_RANGE_END_SENTINEL) {
-                console.log("result ) => ", result);
                 seenRange.push(result);
                 result = 0;
                 break;
@@ -549,10 +728,14 @@ export class PasswordRulesParser {
                     let [range, index] = this._parseRange(input, position);
                     // because the index returns the position of ), we add 1 position, so the parsing can continue
                     position = index + 1;
-                    let minMaxChars = range.split(',');
-                    let lastPushedNamedClass = propertyValues[propertyValues.length - 1] as NamedCharacterData;
-                    lastPushedNamedClass.minChars = minMaxChars[0];
-                    lastPushedNamedClass.maxChars = minMaxChars[1];
+                    let rangeChars = range.split(',');
+                    if (rangeChars.length !== 2 || (rangeChars[0] === '0' && rangeChars[1] === '0')) {
+                        console.error("Range parameters are wrong. Usage is (minChar, maxChar.\nminChar and maxChar cannot be both 0.\nUsing range is optional.");
+                    } else {
+                        let lastPushedNamedClass = propertyValues[propertyValues.length - 1] as NamedCharacterData;
+                        lastPushedNamedClass.minChars = rangeChars[0];
+                        lastPushedNamedClass.maxChars = rangeChars[1];
+                    }
                 }
             }
             else if (input[position] === CHARACTER_CLASS_START_SENTINEL) {
@@ -566,10 +749,14 @@ export class PasswordRulesParser {
                     let [range, index] = this._parseRange(input, position);
                     // because the index returns the position of ), we add 1 position, so the parsing can continue
                     position = index + 1;
-                    let minMaxChars = range.split(',');
-                    let lastPushedNamedClass = propertyValues[propertyValues.length - 1] as CustomCharacterData;
-                    lastPushedNamedClass.minChars = minMaxChars[0];
-                    lastPushedNamedClass.maxChars = minMaxChars[1];
+                    let rangeChars = range.split(',');
+                    if (rangeChars.length !== 2 || (rangeChars[0] === '0' && rangeChars[1] === '0')) {
+                        console.error("Range parameters are wrong. Usage is (minChar, maxChar.\nminChar and maxChar cannot be both 0.\nUsing range is optional.");
+                    } else {
+                        let lastPushedNamedClass = propertyValues[propertyValues.length - 1] as CustomCharacterData;
+                        lastPushedNamedClass.minChars = rangeChars[0];
+                        lastPushedNamedClass.maxChars = rangeChars[1];
+                    }
                 }
             }
             else {
@@ -613,7 +800,7 @@ export class PasswordRulesParser {
                 console.error("Unrecognized property value identifier: " + propertyValue);
                 return [null, identifierStartPosition];
             }
-            // TODO maybe here we can fetch the default word list and make this the value of the rule: an array of all the words
+            // TODO: maybe here we can fetch the default word list and make this the value of the rule: an array of all the words
             if (propertyValue === 'default') {
                 const passwordBlocklist = PasswordBlocklist.getInstance();
                 passwordBlocklist.blocklist.forEach(pw => {
@@ -803,7 +990,7 @@ export class PasswordRulesParser {
             /* // check if the next character is either a "(". 
             if (input[position] === CHARACTER_RANGE_START_SENTINEL) {
                 position = this._indexOfNonWhitespaceCharacter(input, position);
-
+    
             } */
             // check if the next character is a ",". 
             if (input[position] === PROPERTY_SEPARATOR) {

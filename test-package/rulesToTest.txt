@@ -1,0 +1,11 @@
+minlength: 21; required: lower, upper, digit; required: [!], [%]; minclasses: 0;
+allowed: lower ( 0 , 10 ) , upper, digit; required: [!](1,5), [%];
+required: [!?.](0,5), [%]; required:[$](0,2); allowed: lower(1, 10);
+required: [!?.](0, 5), [%](-1, 10); allowed: lower(-1,10)
+required: lower(0,10); minlength: 12;
+required: lower(10,10); minlength: 12;
+required: lower(10,10); maxlength: 9;
+required: lower(0,0);
+required: lower(0,10), digit; minlength: 12;
+required: digit; required: upper; allowed: lower(-1,10); maxlength: 40; max-consecutive: 3;
+required: lower(0, 1);required: upper (1,1); required: digit(1,1); required: special(1,1); minlength: 10;
