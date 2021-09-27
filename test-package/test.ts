@@ -13,9 +13,16 @@ import { RuleData } from "../src/data/ruleData.js";
 blist.blocklist = ['1', '2', '3']; */
 
 
-// TODO: use this rule after required: lower(0, 1);required: upper (1,1); required: digit(1,1); required: special(1,1); minlength: 10;
+// required: lower(0, 1); required: upper (1,1); required: digit(1,1); required: special(1,1); minlength: 10;
+// required: lower(0, 1);
+// required: upper (1,1); required: digit(1,1); minlength: 10;
+// required: lower(10,10), upper; minlength: 11;
+// required: lower(0, 1); required: upper (1,1), special(2, 6); required: digit(1,1); minlength: 10;
+// required: lower(0, 1), upper (1,1), special(2, 6), digit(1,1); minlength: 10;
+// required: lower; required: lower, upper;
+// required: lower(0, 1), upper (1,1), digit(1,1), special(1,1); minlength: 10;
 let x = new PasswordRulesParser();
-let z = x.parsePasswordRules("required: lower(0, 1);required: upper (1,1); required: digit(1,1); minlength: 10;", false);
+let z = x.parsePasswordRules("required: lower(0, 1); required: upper (1,1); required: digit(1,1); required: special(1,1); minlength: 10;", false);
 console.log(z);
 console.log(z[0].value);
 console.log(z[1].value);
