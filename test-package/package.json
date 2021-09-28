@@ -3,12 +3,12 @@
 	"devDependencies": {
 		"@types/node": "^16.4.3",
 		"eslint": "^7.27.0",
-		"typescript": "^4.3.2"
+		"typescript": "^4.3.2",
+		"ansi-regex": ">=5.0.1"
 	},
 	"scripts": {
 		"tsc": "tsc -p tsconfig.json",
-        "copy-blocklist-data": "cp ../src/data/*.txt test/src/data/"
-
+		"copy-blocklist-data": "cp ../src/data/*.txt test/src/data/"
 	},
 	"dependencies": {
 		"@passcert/pwrules-annotations": "^1.1.0"
