@@ -130,7 +130,7 @@ export class PasswordRulesParser {
         /* The rules up until now are all fine, but there may be some incoherences with ranges, i.e., the sum of the maximum number of characters of each class may be lower than the minlength of the password. Or vice-versa, for the maxlength. */
         /* Now we will correct any errors that may be present regarding character classes ranges */
 
-        let maxCharsRangeTotal = 0;    // holds the value of the sum of all maxChars' range values, i.e., required: upper(1, 4), lower(2, 4); => minCharsRangeTotal = 8
+        let maxCharsRangeTotal = 0;    // holds the value of the sum of all maxChars' range values, i.e., required: upper(1, 4), lower(2, 4); => maxCharsRangeTotal = 8
         let minCharsRangeTotal = 0;    // holds the value of the sum of all minChars' range values, i.e., required: upper(1, 4), lower(2, 4); => minCharsRangeTotal = 3
         let classesSeen: string[] = [];
 
@@ -151,10 +151,7 @@ export class PasswordRulesParser {
         // maxLength range checks
         if (minimumMaxLength !== null) {
 
-            // check that the sum of minChars of all classes is less than the maxLength rule. 
-            // if it is not, then delete all ranges -- they were not used correctly.
-            // if all 4 classes are present in required and dont have range, then substitute them for ascii-printable
-            // if all 4 classes are present in required and have range, then keep them like they are
+            // check that the sum of minChars of all classes is less than or equal to the maxLength rule. 
             if (minCharsRangeTotal > minimumMaxLength) {
 
                 this._fixRangeIncoherences(newPasswordRules, classesSeen);
@@ -165,10 +162,7 @@ export class PasswordRulesParser {
         // minLength range checks
         if (maximumMinLength !== null) {
 
-            // check that the sum of maxChars of all classes is, at least, equal to the minlength rule. 
-            // if it is not, then delete all ranges -- they were not used correctly.
-            // if all 4 classes are present in required and dont have range, then substitute them for ascii-printable
-            // if all 4 classes are present in required and have range, then keep them like they are
+            // check that the sum of maxChars of all classes is greater than or equal to the minlength rule. 
             // also, if there is no minlength rule, something like required: lower(0,1); would be accepted. So now we remove the range from these types of passwordrules.
             if (maxCharsRangeTotal < maximumMinLength || maximumMinLength === 0) {
                 this._fixRangeIncoherences(newPasswordRules, classesSeen);
