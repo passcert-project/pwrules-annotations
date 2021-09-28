@@ -55,7 +55,7 @@ export class PasswordRulesParser {
                         if (Number(element.minChars) < 1) {
                             element.minChars = '1';
                         }
-                        // QUESTION: Why was this here??? -> if it has a range, don't copy it to the allowed rule.
+
                         // if the required rule has range, remove the range and add it to allowed
                         if (this._hasCharRange(element)) {
                             let allowedRule;
