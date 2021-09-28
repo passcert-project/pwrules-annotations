@@ -13,7 +13,6 @@ import { RuleData } from "../src/data/ruleData.js";
 blist.blocklist = ['1', '2', '3']; */
 
 
-
 let x = new PasswordRulesParser();
 let z = x.parsePasswordRules("required: [!?.](0, 5), [%](-1, 10); allowed: lower(-1,10); minlength: 16; maxlength: 20;", false);
 console.log(z);
