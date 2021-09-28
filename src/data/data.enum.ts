@@ -27,6 +27,8 @@ export const CHARACTER_CLASS_END_SENTINEL = "]";
 export const PROPERTY_VALUE_SEPARATOR = ",";
 export const PROPERTY_SEPARATOR = ";";
 export const PROPERTY_VALUE_START_SENTINEL = ":";
+export const CHARACTER_RANGE_START_SENTINEL = "(";
+export const CHARACTER_RANGE_END_SENTINEL = ")";
 
 export const SPACE_CODE_POINT = " ".codePointAt(0);
 

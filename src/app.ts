@@ -4,7 +4,7 @@
 
 import { PasswordBlocklist } from './data/passwordBlocklist';
 import { CustomCharacterData } from './data/customCharacterData';
-import { BlockListIdentifier, CHARACTER_CLASS_END_SENTINEL, CHARACTER_CLASS_START_SENTINEL, Identifier, PROPERTY_SEPARATOR, PROPERTY_VALUE_SEPARATOR, PROPERTY_VALUE_START_SENTINEL, RuleName, SHOULD_NOT_BE_REACHED, SPACE_CODE_POINT } from './data/data.enum';
+import { BlockListIdentifier, CHARACTER_CLASS_END_SENTINEL, CHARACTER_CLASS_START_SENTINEL, CHARACTER_RANGE_END_SENTINEL, CHARACTER_RANGE_START_SENTINEL, Identifier, PROPERTY_SEPARATOR, PROPERTY_VALUE_SEPARATOR, PROPERTY_VALUE_START_SENTINEL, RuleName, SHOULD_NOT_BE_REACHED, SPACE_CODE_POINT } from './data/data.enum';
 import { NamedCharacterData } from './data/namedCharacterData';
 import { RuleData } from './data/ruleData';
 
@@ -22,7 +22,7 @@ export class PasswordRulesParser {
 
         // When formatting rules for minified version, we should keep the formatted rules
         // as similar to the input as possible. Avoid copying required rules to allowed rules.
-        const suppressCopyingRequiredToAllowed = formatRulesForMinifiedVersion;
+        let suppressCopyingRequiredToAllowed = formatRulesForMinifiedVersion;
 
         let newPasswordRules: RuleData[] = [];
         let newAllowedValues: any[] = [];
@@ -49,13 +49,45 @@ export class PasswordRulesParser {
 
                 case RuleName.REQUIRED:
                     rule.value = this._canonicalizedPropertyValues(rule.value, formatRulesForMinifiedVersion);
+                    rule.value.forEach(element => {
+
+                        // if the minChars value is less than 1, make it 1.
+                        if (Number(element.minChars) < 1) {
+                            element.minChars = '1';
+                        }
+
+                        // if the required rule has range, remove the range and add it to allowed
+                        if (this._hasCharRange(element)) {
+                            let allowedRule;
+                            if (element.type === 'NamedCharacterData') {
+                                allowedRule = Object.assign(new NamedCharacterData(element.name), element);
+
+                            } else if (element.type === 'CustomCharacterData') {
+                                allowedRule = Object.assign(new CustomCharacterData(element.name), element);
+                            }
+                            allowedRule.minChars = undefined;
+                            allowedRule.maxChars = undefined;
+                            if (!suppressCopyingRequiredToAllowed) {
+                                newAllowedValues = newAllowedValues.concat(allowedRule);
+                            }
+                        }
+                        // add rule without range to the allowed. this was the default behavior before my changes.
+                        else {
+                            if (!suppressCopyingRequiredToAllowed) {
+                                newAllowedValues = newAllowedValues.concat(element);
+                            }
+                        }
+                    });
                     newPasswordRules.push(rule);
-                    if (!suppressCopyingRequiredToAllowed) {
-                        newAllowedValues = newAllowedValues.concat(rule.value);
-                    }
                     break;
 
                 case RuleName.ALLOWED:
+                    rule.value.forEach(element => {
+                        // if the minChars value is greater than 1, make it 0.
+                        if (Number(element.minChars) >= 1) {
+                            element.minChars = '0';
+                        }
+                    });
                     newAllowedValues = newAllowedValues.concat(rule.value);
                     break;
 
@@ -93,6 +125,48 @@ export class PasswordRulesParser {
             newPasswordRules.push(new RuleData(RuleName.MIN_CLASSES, 1));
         } else {
             newPasswordRules.push(new RuleData(RuleName.MIN_CLASSES, 4));
+        }
+
+        /* The rules up until now are all fine, but there may be some incoherences with ranges, i.e., the sum of the maximum number of characters of each class may be lower than the minlength of the password. Or vice-versa, for the maxlength. */
+        /* Now we will correct any errors that may be present regarding character classes ranges */
+
+        let maxCharsRangeTotal = 0;    // holds the value of the sum of all maxChars' range values, i.e., required: upper(1, 4), lower(2, 4); => maxCharsRangeTotal = 8
+        let minCharsRangeTotal = 0;    // holds the value of the sum of all minChars' range values, i.e., required: upper(1, 4), lower(2, 4); => minCharsRangeTotal = 3
+        let classesSeen: string[] = [];
+
+        // check for the sum of minChars and maxChars in all required rules
+        newPasswordRules.filter(rule => rule.name === RuleName.REQUIRED)
+            .forEach(rr => {
+                rr.value.forEach(rt => {
+                    // if a class is required but has no range, these characters can be used any number of times.
+                    // thus, add 128 to the count of minCharsRangeTotal -> this rule should always be accepted
+                    // 128 is the max number for password length in Bitwarden, which is the Password Manager i'm working with.
+                    maxCharsRangeTotal += Number(rt.maxChars) ? Number(rt.maxChars) : 128;
+                    minCharsRangeTotal += Number(rt.minChars) ? Number(rt.minChars) : 128;
+
+                    classesSeen.push(rt.name);
+                });
+            });
+
+        // maxLength range checks
+        if (minimumMaxLength !== null) {
+
+            // check that the sum of minChars of all classes is less than or equal to the maxLength rule. 
+            if (minCharsRangeTotal > minimumMaxLength) {
+
+                this._fixRangeIncoherences(newPasswordRules, classesSeen);
+            };
+
+        }
+
+        // minLength range checks
+        if (maximumMinLength !== null) {
+
+            // check that the sum of maxChars of all classes is greater than or equal to the minlength rule. 
+            // also, if there is no minlength rule, something like required: lower(0,1); would be accepted. So now we remove the range from these types of passwordrules.
+            if (maxCharsRangeTotal < maximumMinLength || maximumMinLength === 0) {
+                this._fixRangeIncoherences(newPasswordRules, classesSeen);
+            };
         }
 
         return newPasswordRules;
@@ -138,6 +212,15 @@ export class PasswordRulesParser {
     private _isASCIIWhitespace(c: string): boolean {
         console.assert(c.length === 1);
         return c === " " || c === "\f" || c === "\n" || c === "\r" || c === "\t";
+    }
+
+    /**
+     * Check if the object received has a range for minimum and maximum characters.
+     * @param o The object to analyze.
+     * @returns True if the o has a range and False if not.
+     */
+    private _hasCharRange(o: NamedCharacterData | CustomCharacterData): boolean {
+        return o.minChars !== undefined && o.maxChars !== undefined;
     }
 
     //#endregion
@@ -213,7 +296,7 @@ export class PasswordRulesParser {
 
     private _canonicalizedPropertyValues(propertyValues: any[], keepCustomCharacterClassFormatCompliant: boolean): (NamedCharacterData | CustomCharacterData)[] {
         let asciiPrintableBitSet = new Array("~".codePointAt(0) - " ".codePointAt(0) + 1);
-
+        let hasCharRange = false;
         for (let propertyValue of propertyValues) {
             if (propertyValue instanceof NamedCharacterData) {
                 if (propertyValue.name === Identifier.UNICODE) {
@@ -223,6 +306,11 @@ export class PasswordRulesParser {
                 if (propertyValue.name === Identifier.ASCII_PRINTABLE) {
                     return [new NamedCharacterData(Identifier.ASCII_PRINTABLE)];
                 }
+
+                if (propertyValue.minChars !== undefined && propertyValue.maxChars !== undefined) {
+                    hasCharRange = true;
+                }
+
 
                 this._markBitsForNamedCharacterClass(asciiPrintableBitSet, propertyValue);
             }
@@ -311,25 +399,63 @@ export class PasswordRulesParser {
         }
 
         let result = [];
-        if (hasAllUpper && hasAllLower && hasAllDigits && hasAllSpecial) {
+
+        // has all 4 classes, but some of them have ranges.
+        // this means that ascii-printable will be allowed, but there are some specific ranges that need to be fulfilled, thus, we need to return the original values parsed, for later verification.
+        if (hasAllUpper && hasAllLower && hasAllDigits && hasAllSpecial && hasCharRange) {
+            propertyValues.forEach(val => {
+                result.push(val);
+            });
+            return result;
+        } else if (hasAllUpper && hasAllLower && hasAllDigits && hasAllSpecial) {
+
             return [new NamedCharacterData(Identifier.ASCII_PRINTABLE)];
         }
+
         if (hasAllUpper) {
-            result.push(new NamedCharacterData(Identifier.UPPER));
+            let newNamedClass = propertyValues.filter(x => x.type === 'NamedCharacterData' && x.name === Identifier.UPPER)[0];
+
+            result.push(newNamedClass);
         }
         if (hasAllLower) {
-            result.push(new NamedCharacterData(Identifier.LOWER));
+            let newNamedClass = propertyValues.filter(x => x.type === 'NamedCharacterData' && x.name === Identifier.LOWER)[0];
+            result.push(newNamedClass);
         }
         if (hasAllDigits) {
-            result.push(new NamedCharacterData(Identifier.DIGIT));
+            let newNamedClass = propertyValues.filter(x => x.type === 'NamedCharacterData' && x.name === Identifier.DIGIT)[0];
+            result.push(newNamedClass);
         }
         if (hasAllSpecial) {
-            result.push(new NamedCharacterData(Identifier.SPECIAL));
+            let newNamedClass = propertyValues.filter(x => x.type === 'NamedCharacterData' && x.name === Identifier.SPECIAL)[0];
+            result.push(newNamedClass);
         }
         if (charactersSeen.length) {
-            result.push(new CustomCharacterData(charactersSeen));
+            let newNamedClass: CustomCharacterData;
+            charactersSeen.forEach(cs => {
+                newNamedClass = propertyValues.filter(x => x.type === 'CustomCharacterData' && x.characters.includes(cs))[0];
+                if (!result.includes(newNamedClass)) {
+                    result.push(newNamedClass);
+                }
+            })
         }
         return result;
+    }
+
+    /**
+     * Marks the range of every required character class as undefined aka deletes the range.
+     * @param passwordRules The array of rules to verify
+     */
+    private _markRangesAsUndefined(passwordRules: RuleData[]) {
+        for (let i = 0; i < passwordRules.length; i++) {
+            if (passwordRules[i].name === RuleName.REQUIRED) {
+                passwordRules[i].value.forEach(charClass => {
+                    if (this._hasCharRange(charClass)) {
+                        charClass.minChars = undefined;
+                        charClass.maxChars = undefined;
+                    }
+                })
+            }
+        }
     }
 
     //#endregion
@@ -378,6 +504,52 @@ export class PasswordRulesParser {
 
         return [seenIdentifiers.join(""), position];
     }
+
+    /**
+     * Parses the identifier of each rule. 
+     * @param input The string that contains the rules to be parsed.
+     * @param position The position from where to start parsing the input.
+     * @returns The name of the identifier and the last position analyzed.
+     */
+    private _parseRange(input: string, position: number): [string, number] {
+        console.assert(position >= 0);
+        console.assert(position < input.length);
+        // console.assert(this._isIdentifierCharacter(input[position]));
+
+        let length = input.length;
+        let seenRange = [];
+        let result = 0;
+        do {
+
+            if (input[position] === CHARACTER_RANGE_START_SENTINEL || this._isASCIIWhitespace(input[position])) {
+                ++position;
+                continue;
+            }
+
+            // if we see a whitespace or a comma, then we can push the result integer to the list. 
+            // useful for integer > 9
+            if (input[position] === PROPERTY_VALUE_SEPARATOR) {
+                seenRange.push(result);
+                result = 0;
+                ++position;
+                continue;
+            }
+
+            if (input[position] === CHARACTER_RANGE_END_SENTINEL) {
+                seenRange.push(result);
+                result = 0;
+                break;
+            }
+            if (this._isASCIIDigit(input[position])) {
+                result = 10 * result + parseInt(input[position], 10);
+            }
+
+            ++position;
+        } while (position < length);
+
+        return [seenRange.join(","), position];
+    }
+
 
     /**
      * Check if the identifier is a valid one for the "required" and "allowed" rules.
@@ -474,12 +646,40 @@ export class PasswordRulesParser {
                     return [null, identifierStartPosition];
                 }
                 propertyValues.push(new NamedCharacterData(propertyValue));
+                position = this._indexOfNonWhitespaceCharacter(input, position);
+                if (input[position] === CHARACTER_RANGE_START_SENTINEL) {
+                    let [range, index] = this._parseRange(input, position);
+                    // because the index returns the position of ), we add 1 position, so the parsing can continue
+                    position = index + 1;
+                    let rangeChars = range.split(',');
+                    if (rangeChars.length !== 2 || (rangeChars[0] === '0' && rangeChars[1] === '0')) {
+                        console.error("Range parameters are wrong. Usage is (minChar, maxChar.\nminChar and maxChar cannot be both 0.\nUsing range is optional.");
+                    } else {
+                        let lastPushedNamedClass = propertyValues[propertyValues.length - 1] as NamedCharacterData;
+                        lastPushedNamedClass.minChars = rangeChars[0];
+                        lastPushedNamedClass.maxChars = rangeChars[1];
+                    }
+                }
             }
-            else if (input[position] == CHARACTER_CLASS_START_SENTINEL) {
+            else if (input[position] === CHARACTER_CLASS_START_SENTINEL) {
                 let [propertyValueArray, index] = this._parseCustomCharacterClass(input, position);
                 position = index;
                 if (propertyValueArray && propertyValueArray.length) {
                     propertyValues.push(new CustomCharacterData(propertyValueArray));
+                }
+                if (input[position] === CHARACTER_RANGE_START_SENTINEL) {
+                    position = this._indexOfNonWhitespaceCharacter(input, position);
+                    let [range, index] = this._parseRange(input, position);
+                    // because the index returns the position of ), we add 1 position, so the parsing can continue
+                    position = index + 1;
+                    let rangeChars = range.split(',');
+                    if (rangeChars.length !== 2 || (rangeChars[0] === '0' && rangeChars[1] === '0')) {
+                        console.error("Range parameters are wrong. Usage is (minChar, maxChar.\nminChar and maxChar cannot be both 0.\nUsing range is optional.");
+                    } else {
+                        let lastPushedNamedClass = propertyValues[propertyValues.length - 1] as CustomCharacterData;
+                        lastPushedNamedClass.minChars = rangeChars[0];
+                        lastPushedNamedClass.maxChars = rangeChars[1];
+                    }
                 }
             }
             else {
@@ -523,7 +723,7 @@ export class PasswordRulesParser {
                 console.error("Unrecognized property value identifier: " + propertyValue);
                 return [null, identifierStartPosition];
             }
-            // TODO maybe here we can fetch the default word list and make this the value of the rule: an array of all the words
+            // fetch the default word list and make this the value of the rule: an array of all the words
             if (propertyValue === 'default') {
                 const passwordBlocklist = PasswordBlocklist.getInstance();
                 passwordBlocklist.blocklist.forEach(pw => {
@@ -552,6 +752,7 @@ export class PasswordRulesParser {
         let mayBeIdentifierStartPosition = position;
         let [identifier, index] = this._parseIdentifier(input, position);
         position = index;
+        // identifier is a word. if it doesn't exist, throw error.
         if (!Object.values(RuleName).includes(identifier)) {
             console.error("Unrecognized property name: " + identifier);
             return [null, mayBeIdentifierStartPosition];
@@ -709,6 +910,7 @@ export class PasswordRulesParser {
                 break;
             }
 
+            // check if the next character is a ",". 
             if (input[position] === PROPERTY_SEPARATOR) {
                 position = this._indexOfNonWhitespaceCharacter(input, position + 1);
                 if (position >= length) {
@@ -723,6 +925,38 @@ export class PasswordRulesParser {
         }
 
         return parsedProperties;
+    }
+
+    /**
+     * Fix range incoherences that may be present in the rules.
+     * @param passwordRules The array of rules to verify
+     * @param classesSeen The character classes seen
+     */
+    private _fixRangeIncoherences(passwordRules: RuleData[], classesSeen: string[],) {
+        // Not all 4 classes were required. This means that the sum of minimum characters of all classes is greater than the maxlength rule OR the sum of maximum characters of all classes is less than the minlength rule.
+        // Remove all the ranges, because they have been used incorrectly.
+        if (classesSeen.length < 4) {
+            this._markRangesAsUndefined(passwordRules);
+        }
+        // All 4 character classes have been seen.
+        // This means that the sum of minimum characters range is greater than the maxlength rule OR the sum of maximum characters range is less than the minlegnth rule.
+        // Thus, we need to remove the ranges. If there is only one required rule with all 4 classes, this class will convert to ascii-printable.
+        else {
+            let numRequiredRules = passwordRules.filter(rule => rule.name === RuleName.REQUIRED).length;
+
+            // there are multiple required rules, i.e., required: u; required: l; required:s,d; etc.
+            if (numRequiredRules > 1) {
+                this._markRangesAsUndefined(passwordRules);
+            }
+            else if (numRequiredRules == 1) {
+                // Only one required rule. 
+                // Seen all 4 character classes
+                // maxlength OR minlength rule is not fulfilled 
+                // Therefore, substitute all character classes by ascii-printable -> required: l,u,s,d; <=> required: ascii-printable;
+                let ruleIndex = passwordRules.findIndex(rule => rule.name === RuleName.REQUIRED);
+                passwordRules[ruleIndex].value = [new NamedCharacterData(Identifier.ASCII_PRINTABLE)];
+            }
+        }
     }
 
     //#endregion
