@@ -1,11 +1,27 @@
-minlength: 21; required: lower, upper, digit; required: [!], [%]; minclasses: 0;
-allowed: lower ( 0 , 10 ) , upper, digit; required: [!](1,5), [%];
-required: [!?.](0,5), [%]; required:[$](0,2); allowed: lower(1, 10);
-required: [!?.](0, 5), [%](-1, 10); allowed: lower(-1,10)
-required: lower(0,10); minlength: 12;
-required: lower(10,10); minlength: 12;
-required: lower(10,10); maxlength: 9;
-required: lower(0,0);
-required: lower(0,10), digit; minlength: 12;
+-- Tested 27/09
+required: lower(0, 1); required: upper(1,1); required: digit(1,1); required: special(1,1); minlength: 10;
+required: lower(0, 1);
+required: upper (1,1); required: digit(1,1); minlength: 10;
+required: lower(10,10), upper; minlength: 11;
+required: lower(0, 1); required: upper (1,1), special(2, 6); required: digit(1,1); minlength: 10;
+required: lower(0, 1), upper (1,1), special(2, 6), digit(1,1); minlength: 10;
+required: lower; required: lower, upper;
+required: lower(0, 1), upper (1,1), digit(1,1), special(1,1); minlength: 10;
+required: lower(3, 5); required: upper (1,6); required: digit(2,9); required: special(4,10); minlength: 10;
+required: lower(3, 5), upper (1,6), digit(2,9), special(4,10); minlength: 10;
+required: lower, upper, digit, special; minlength: 10;
+
+-- Tested 28/09
 required: digit; required: upper; allowed: lower(-1,10); maxlength: 40; max-consecutive: 3;
-required: lower(0, 1);required: upper (1,1); required: digit(1,1); required: special(1,1); minlength: 10;
+required: lower(0,10), digit; minlength: 12;
+required: lower(0,0);
+required: lower(10,10); maxlength: 9;
+required: lower(10,10); minlength: 12;
+required: lower(0,10); minlength: 12;
+minlength: 21; required: lower, upper, digit; required: [!], [%]; minclasses: 0;
+allowed: lower ( 0 , 10 ) , upper, digit; required: [!](1,5), [%]; // this will remove the required range because there is no minlength rule. this is okay. ranges should always be used with, at least, minlength rule.
+required: [!?.](0,5), [%]; required:[$](0,2); allowed: lower(1, 10);
+required: [!?.](0,5), [%]; required:[$](0,2), upper(3, 12); allowed: lower(1, 10); minlength: 12
+required: [!?.](0, 5), [%](-1, 10); allowed: lower(-1,10)
+required: [!?.](0, 5), [%](-1, 10); allowed: lower(-1,10); minlength: 12; maxlength: 20;
+required: [!?.](0, 5), [%](-1, 10); allowed: lower(-1,10); minlength: 16; maxlength: 20;
