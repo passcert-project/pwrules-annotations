@@ -35,7 +35,7 @@ There are some obvious restrictions to the range option:
 
 - The `minimum` value should be less than or equal to `maximum`.
 
-- The `minimum` and `maximum` values can be the same --- this means that the character class **should have exactly** that number of occurrences.
+    - The `minimum` and `maximum` values can be the same --- this means that the character class **should have exactly** that number of occurrences.
 
 - The range will be discarded when:
   
