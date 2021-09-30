@@ -10,7 +10,7 @@
 		"tsc": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json && npm run copy-blocklist-data",
 		"prepublish": "npm run tsc",
 		"test-program": "cd test-package && npm run tsc",
-		"copy-blocklist-data": "echo \"./lib/cjs/data/ ./lib/esm/data\" | xargs -n 1 cp -v src/data/*.txt"
+		"copy-blocklist-data": "echo \"./lib/cjs/data/ ./lib/esm/data\" | xargs -n 1 cp -v src/data/*.json"
 	},
 	"repository": {
 		"type": "git",

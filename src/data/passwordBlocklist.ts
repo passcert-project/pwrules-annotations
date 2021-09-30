@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import * as defaultBlocklist from "./blocklistWordsData.json";
 
 export class PasswordBlocklist {
     private _blocklist: string[] = [];
@@ -14,7 +14,7 @@ export class PasswordBlocklist {
 
     private constructor() {
         // add the 100k more used passwords to the blocklist
-        this._blocklist = fs.readFileSync(__dirname + '/blocklistWordsData.txt', 'utf8').split('\n');
+        this._blocklist = defaultBlocklist.blocklist;
     }
 
     public static getInstance(): PasswordBlocklist {

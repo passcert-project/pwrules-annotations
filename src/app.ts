@@ -63,7 +63,7 @@ export class PasswordRulesParser {
                                 allowedRule = Object.assign(new NamedCharacterData(element.name), element);
 
                             } else if (element.type === 'CustomCharacterData') {
-                                allowedRule = Object.assign(new CustomCharacterData(element.name), element);
+                                allowedRule = Object.assign(new CustomCharacterData(element.characters), element);
                             }
                             allowedRule.minChars = undefined;
                             allowedRule.maxChars = undefined;
@@ -233,7 +233,7 @@ export class PasswordRulesParser {
      * @returns The adapted ASCII code for the character.
      */
     private _bitSetIndexForCharacter(c: string): number {
-        console.assert(c.length == 1);
+        console.assert(c.length === 1);
         return c.codePointAt(0) - SPACE_CODE_POINT;
     }
 
@@ -728,7 +728,7 @@ export class PasswordRulesParser {
                 const passwordBlocklist = PasswordBlocklist.getInstance();
                 passwordBlocklist.blocklist.forEach(pw => {
                     propertyValues.push(pw);
-                })
+                });
             } else {
                 propertyValues.push(propertyValue);
             }

@@ -8,7 +8,7 @@
 	},
 	"scripts": {
 		"tsc": "tsc -p tsconfig.json",
-		"copy-blocklist-data": "cp ../src/data/*.txt test/src/data/"
+		"copy-blocklist-data": "cp ../src/data/*.json test/src/data/"
 	},
 	"dependencies": {
 		"@passcert/pwrules-annotations": "^1.1.0"

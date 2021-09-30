@@ -14,7 +14,7 @@ blist.blocklist = ['1', '2', '3']; */
 
 
 let x = new PasswordRulesParser();
-let z = x.parsePasswordRules("required: [!?.](0, 5), [%](-1, 10); allowed: lower(-1,10); minlength: 16; maxlength: 20;", false);
+let z = x.parsePasswordRules("required: [!?.](0, 5), [%](-1, 10); allowed: lower(-1,10); minlength: 16; maxlength: 20; blocklist: default;", false);
 console.log(z);
 console.log(z[0].value);
 console.log(z[1].value);

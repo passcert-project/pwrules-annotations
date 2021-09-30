@@ -6,7 +6,8 @@
 		"sourceMap": true,
 		"outDir": "test",
 		"moduleResolution": "node",
-		"noEmit": false
+		"noEmit": false,
+        "resolveJsonModule" : true,
 	}
 }
 // module: ES2020 -> ES packages; gotta have the option type:"module" in package.json
