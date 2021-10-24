@@ -1,7 +1,7 @@
 {
 	"name": "@passcert/pwrules-annotations",
-	"version": "2.0.0",
-	"description": "This package allows the parsing of Apple's password rules and is based in Apple's javascript parser. This improved version adds two more rules: blocklist and minclasses.\nBlocklist allows the webadmin to use a list of strings that may be prohibited in passwords. This is a good idea to avoid common passwords and their variations, like password123 or p@s$w0rd.\nMinclasses allows the webadmin to specify the minimum number of character classes that should be present in each password, but not specifically which classes.\n\nThis version also provides the ability so specify ranges for each character class. With this extension, it is possible to specifically set an interval of occurences for a given character, e.g., required: lower(4,4); means that the password must have exactly 4 lowercase characters.",
+	"version": "2.0.1",
+	"description": "This package allows the parsing of Apple's password rules and is based in Apple's javascript parser. This improved version adds two more rules: blocklist and minclasses. You can also specify ranges of characters.",
 	"main": "./lib/cjs/index.js",
 	"module": "./lib/esm/index.js",
 	"files": ["lib/"],
